@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+		<script src="/socket.io/socket.io.js"></script>		
+    </head>
+    <body>
+		<form name="form" id="enter">
+		  	<input id="username" name="username" placeholder="Enter your username" autofocus required>
+		  	<select name="room" required>
+			    <option value="">Select room</option>
+			</select>
+		  	<input type="submit" value="Go">
+		</form>
+		
+        <div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
+			<b>ROOMS</b>
+			<div id="rooms"></div>
+			
+			<b>Current Users</b>
+			<div id="currentUsers"></div>
+		</div>
+		
+		<div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
+			<form id="chat">
+				<div id="conversation"></div>
+				<input id="data" style="width:200px;" />
+				<input type="submit" id="datasend" value="send" />
+			</form>
+		</div>
+	</body>
+		
+	<script>
+		var socket = io.connect('http://10.176.200.151:9000');
+			
+		(function() {
+	    	if (!("autofocus" in document.createElement("input"))) {
+		      	$("#username").focus();
+		    };
+
+			$('form#enter').submit(function(e){
+				e.preventDefault();
+				var username = $('#username').val(),
+					room = $('select').val();
+
+				$(this).fadeOut();
+				
+				socket.emit('adduser', username, room);
+			});
+			
+			$('form#chat').submit(function(e){
+				e.preventDefault();
+				
+				var message = $('#data').val();
+				$('#data').val('');
+				// tell server to execute 'sendchat' and send along one parameter
+				socket.emit('sendchat', message);				
+			});
+		
+			$('#rooms').delegate('a', 'click', function(){
+				var room = $(this).text();
+				socket.emit('switchRoom', room);
+			});
+			
+		})();
+
+		// on connection to server, ask for user's name with an anonymous callback
+		socket.on('connect', function(){
+			// call the server-side function 'sendroom' and return values of all rooms
+			socket.emit('sendrooms');
+		});
+
+		// listener, whenever the server emits 'updatechat', this updates the chat body
+		socket.on('updatechat', function (username, data) {
+			$('#conversation').append('<b>'+username + ':</b> ' + data + '<br>');
+		});
+		
+		// listener, whenever the server emits 'updatechat', this updates the chat body
+		socket.on('updateusers', function (usernames) {
+			$('#currentUsers').empty();
+			$.each(usernames, function(){
+				$('#currentUsers').append('<div>' + this + '</div>');
+			})
+		});
+
+		socket.on('availableRooms', function (availableRooms) {
+			$.each(availableRooms, function(){
+				$('<option value="'+ this +'">' + this + '</option>').appendTo($('form#enter select'));
+			})
+		});
+		
+		// listener, whenever the server emits 'updaterooms', this updates the room the client is in
+		socket.on('updaterooms', function(rooms, current_room) {
+			$('#rooms').empty();
+			$.each(rooms, function(key, value) {
+				if(value == current_room){
+					$('#rooms').append('<div>' + value + '</div>');
+				}
+				else {
+					$('#rooms').append('<div><a href="#">' + value + '</a></div>');
+				}
+			});
+		});
+		
+	</script>
+</html>
