@@ -1,43 +1,10 @@
-var app = require('express').createServer()
-var io = require('socket.io').listen(app);
+var express = require('express');
+var app = express();
+var http = require('http');
+var server = http.createServer(app);
+var io = require('socket.io').listen(server);
 
-//connect to DB
-var moongoose = require('mongoose');
-var db = mongoose.connect('mongodb://localhost/chatroom');
-
-// Define Model
-// mongoose.model('Chatrooms', {
-//   collection: 'room',
-//   properties: [
-//     'created',
-//     'username',
-//     'password',
-//     'email'
-//   ],
-//   indexes: [
-//     'created',
-//     [{username: 1},{unique: true}],
-//     [{email: 1},{unique: true}]
-//   ],
-//   static: {},
-//   methods: {},
-//   setters: {},
-//   getters: {}
-//   }
-// );
-// 
-// //Define Collection
-// var User = db.model('Chatrooms');
-// 
-// // Handle Data
-// var user = new User();
-// user.created = new Date();
-// user.username = "TEST";
-// user.password = "PASS";
-// user.email = "someemail";
-// user.save();
-
-app.listen(9000);
+server.listen(3000);
 
 // routing
 app.get('/', function (req, res) {
@@ -45,22 +12,16 @@ app.get('/', function (req, res) {
 });
 
 var CHATAPP = {
-	currentRoomUsers : function(arr, user){
-		arr.splice(arr.indexOf(user), 1);
-		return arr;
-	},
 	rooms : ['room1','room2','room3'], //current available chatrooms
 	users : {}
 };
 
-CHATAPP.users['room1'] = [];
-CHATAPP.users['room2'] = [];
-CHATAPP.users['room3'] = [];
 
 io.sockets.on('connection', function (socket) {
 	
 	// when the client emits 'send room', this listens and executes, and send back how many available rooms
 	socket.on('sendrooms', function () {
+	    console.log(CHATAPP.rooms);
 		socket.emit('availableRooms', CHATAPP.rooms);
 	});
 	
@@ -85,7 +46,7 @@ io.sockets.on('connection', function (socket) {
 		socket.broadcast.to(socket.room).emit('updatechat', 'SERVER', username + ' has connected to ' + socket.room);
 		
 		//keep track of all users in their rooms	
-		CHATAPP.users[socket.room].push(username);
+		//CHATAPP.users[socket.room].push(username);
 		//user and the room will see this message 
 		io.sockets.in(socket.room).emit('updateusers', CHATAPP.users[socket.room]);
 		//highlight room where current user in, and unhighlight other rooms
